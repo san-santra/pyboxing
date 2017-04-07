@@ -13,6 +13,8 @@ white = (255, 255, 255)
 black = (0, 0, 0)
 title_string = 'Py-Boxing'
 
+numplayers = 2
+
 def game_intro(screen, clock):
     '''
     Displays the Intro screen
@@ -36,7 +38,7 @@ def game_intro(screen, clock):
         pygame.display.update()
         clock.tick(fps)
 
-def in_game(screen, clock):
+def in_game(screen, clock, p_images):
     '''
     Main Game
     '''
@@ -53,17 +55,43 @@ def in_game(screen, clock):
     time_size = score_size
     start_ticks = pygame.time.get_ticks()
 
-
     # Position
     timer_pos = 3
     ring_pos = 5
+
+    # player status
+    # 0 -> pulled back
+    # 1 -> right hand punch
+    # 2 -> left hand punch
+    # 3 -> got hit
+    p_stat = [0, 0]
+    user_p = 1
+
+    # Player positions
+    w_lim = (2*window_W/window_div, (window_div - 5)*window_W/window_div)
+    h_lim = ((ring_pos+1)*window_H/window_div, (window_div - 1 - ring_pos)*window_H/window_div)
+
+    # initial positions of the players
+    p_pos = [[w_lim[0], h_lim[0]], [w_lim[1], h_lim[1]] ]
+
+
     
     while not done:
+        # loop handling the events
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit(0)
 
+            if event.type == pygame.KEYUP:
+                # action
+                if event.key == pygame.K_SPACE:
+                    p_stat[user_p] = 1
+                else:
+                    # need to think when to pull the hand back
+                    p_stat[user_p] = 0
+
+                    
         screen.fill(white)
 
         # main rendering
@@ -85,7 +113,12 @@ def in_game(screen, clock):
         pygame.draw.rect(screen, black,
                          pygame.Rect(window_W/window_div, ring_pos*window_H/window_div,
                                      (window_div - 2)*window_W/window_div,
-                                     (window_div - 1 - ring_pos)*window_H/window_div), 2)
+                                     (window_div - 1 - ring_pos)*window_H/window_div),
+                             2)
+
+        # The players
+        for i in range(numplayers):
+            screen.blit(p_images[i][p_stat[i]], (p_pos[i][0], p_pos[i][1]))
         
 
         pygame.display.update()
@@ -135,7 +168,6 @@ def display_text(screen, text, font_size, x, y):
     textSurf, textRect = text_objects(text, font)
     textRect.center = (x, y)
     screen.blit(textSurf, textRect)
-                
 
 if __name__=='__main__':
     # game init
@@ -147,7 +179,16 @@ if __name__=='__main__':
 
     finish = False
 
+    # load the figures
+    numimg = 4
+    p_images = [[], []]
+    
+    for p in xrange(numplayers):
+        for i in xrange(numimg):
+            p_images[p].append(pygame.image.load('p'+str(p+1)+'_'+str(i+1)+'.png'))
+
+            
     while not finish:
-        game_intro(screen, clock)
-        (cpu_score, player_score) = in_game(screen, clock)
+        # game_intro(screen, clock)
+        (cpu_score, player_score) = in_game(screen, clock, p_images)
         finish = game_over(screen, clock, cpu_score, player_score)
