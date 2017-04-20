@@ -27,7 +27,7 @@ def game_intro(screen, clock):
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit(0)
-            if event.type == pygame.KEYDOWN:
+            if event.type == pygame.KEYUP:
                 intro = False
 
         screen.fill(white)
@@ -44,9 +44,12 @@ def in_game(screen, clock, p_images):
     '''
 
     # parameter init
-    fps = 60
+    fps = 30
     done = False
-    time_lim = 20  #seconds
+    time_lim = 120 #seconds
+    step_size = 2
+    hand_len = p_images[1][1].get_width()/2  # this length is wrong to be precise
+    dist_thr = 700
     
     cpu_score = 0
     player_score = 0
@@ -66,6 +69,7 @@ def in_game(screen, clock, p_images):
     # 3 -> got hit
     p_stat = [0, 0]
     user_p = 1
+    opponent_p = 0
 
     # Player positions
     w_lim = (2*window_W/window_div, (window_div - 5)*window_W/window_div)
@@ -74,24 +78,52 @@ def in_game(screen, clock, p_images):
     # initial positions of the players
     p_pos = [[w_lim[0], h_lim[0]], [w_lim[1], h_lim[1]] ]
 
-
     
     while not done:
+        # reset hand
+        p_stat[user_p] = 0
+        p_stat[opponent_p] = 0
+
         # loop handling the events
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit(0)
 
-            if event.type == pygame.KEYUP:
-                # action
-                if event.key == pygame.K_SPACE:
-                    p_stat[user_p] = 1
+            if event.type == pygame.KEYUP and event.key == pygame.K_SPACE:
+                # PUNCH!
+                p_stat[user_p] = 1
+
+                # need to check if the punch has hit the opponent
+                player_pos = p_pos[user_p]
+                opponent_pos = p_pos[opponent_p]
+
+                # stored as width and height
+                if user_p == 1:
+                    hand_pos_upd = [ -hand_len, -hand_len]
                 else:
-                    # need to think when to pull the hand back
-                    p_stat[user_p] = 0
+                    hand_pos_upd = [ hand_len, -hand_len]
+
+                hand_pos = [player_pos[0] + hand_pos_upd[0], player_pos[1] + hand_pos_upd[1]]
+                distance_sq = (hand_pos[0] - opponent_pos[0])**2 + (hand_pos[1] - opponent_pos[1])**2
+                print distance_sq
+                if distance_sq < dist_thr:
+                    player_score += 1
+                    p_stat[opponent_p] = 3
 
                     
+
+        # now the movement handling
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_UP]:
+            p_pos[user_p][1] -=  step_size
+        if keys[pygame.K_DOWN]:
+            p_pos[user_p][1] += step_size
+        if keys[pygame.K_LEFT]:
+            p_pos[user_p][0] -= step_size
+        if keys[pygame.K_RIGHT]:
+            p_pos[user_p][0] += step_size
+
         screen.fill(white)
 
         # main rendering
@@ -137,7 +169,17 @@ def game_over(screen, clock, cpu_score, player_score):
     fps = 15
 
     title_font_size = 60
+    msg_font_size = 30
     font_size = 30
+
+    score_diff = player_score - cpu_score
+    if score_diff > 0:
+        game_txt = 'White Player wins'
+    elif score_diff < 0:
+        game_txt = 'Black Player wins'
+    else:
+        game_txt = 'Game Tied'
+        
 
     while not done:
         for event in pygame.event.get():
@@ -151,8 +193,12 @@ def game_over(screen, clock, cpu_score, player_score):
                     return False
 
                 return True
+            
 
-        display_text(screen, "Game Over", title_font_size, window_W/2, window_H/2)
+        # display_text(screen, "Game Over", title_font_size, window_W/2, window_H/2)
+        display_text(screen, game_txt, title_font_size, window_W/2, window_H/2)
+        display_text(screen, 'Press Enter to Restart', msg_font_size, window_W/2, window_H/2 + 50)
+        display_text(screen, 'Press any other key to exit', msg_font_size, window_W/2, window_H/2 +100)
 
         pygame.display.update()
         clock.tick(fps)
@@ -189,6 +235,7 @@ if __name__=='__main__':
 
             
     while not finish:
-        # game_intro(screen, clock)
+        game_intro(screen, clock)
         (cpu_score, player_score) = in_game(screen, clock, p_images)
         finish = game_over(screen, clock, cpu_score, player_score)
+        print finish
